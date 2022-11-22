@@ -1,0 +1,568 @@
+---
+title: "Análise Microdados ENADE 2018"
+author: "Taciana Vasconcelos"
+date: '2022-05-15'
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#  {.tabset}
+
+## Introdução
+
+**INEP/ENADE**
+
+*O INEP (Instituto Nacional de Estudos e Pesquisas Educacionais Anísio Teixeira) é o responsável por promover estudos, pesquisas e avaliações sobre o sistema educacional brasileiro. As avaliações realizadas pelo INEP procuram avaliar e identificar os fatores que afetam a qualidade do ensino dos estudantes em geral (fatores socioeconômico, cultural,dentre outros), informações acerta dos docentes, diretores e instituições, além de mensurar o aprendizado dos conteúdos propostos.*
+
+*Para que seja possível avaliar a qualidade do ensino da Educação Superior, o INEP aplica o Exame Nacional de Desempenho de Estudantes (ENADE), objeto de estudo deste trabalho. O ENADE tem como seu objetivo, acompanhar e avaliar o rendimento dos alunos concluintes, de cursos de graduação, levando em consideração o conteúdo previsto nas diretrizes curriculares do respectivo curso em que o aluno está matriculado.*
+
+*Os microdados do INEP são abertos para a população, neles se encontram resultados das avaliações de diversas provas, como ENEM, ENADE, Prova Brasil e etc.*
+
+
+**____________________________________________________________________________**
+
+
+**OBJETIVO**
+
+*No entanto, é necessário conhecimento em análise de dados para conseguir extrair informação útil dessas bases. Este trabalho apresenta uma exploração da base de dados do **ENADE-2018**, utilizando o método de Análise Exploratória Descritiva de Dados.*
+
+*Tal análise será feita através de gráficos, tabelas e informações extraídas da base de dados citada, tencionando descobrir informações úteis, inteirar conclusões e fundamentar a tomada de decisões.*
+
+## Pacotes que serão utilizados
+
+*Os pacotes a seguir irão ser utilizados para a apresentação e manipulação dos dados trabalhados e serão essenciais para replicação do projeto e seus resultados.*
+
+**PACOTES**
+
+```{r echo=T, message=F, warning=F}
+
+
+library(dplyr) # para trabalhar com quadros de dados como objetos;
+
+library(forcats) # para alterar a ordem e modificar os níveis de um fator;
+
+library(tidyr) # para ajudar a criar dados organizados;
+
+library(ggplot2) # para criar gráficos;
+
+library(plotly) # para criar gráficos interativos a partir do "ggplot2";
+
+library(DT) # exibição de tabelas;
+
+library(knitr) # para geração dinâmica de relatórios;
+
+library(stringr) # para tratamento de strings;
+
+library(gridExtra) # ajuda na tarefa especifica de combinar múltiplos gráficos;
+
+library(formattable) # para a formatação dos resultados dispostos em tabelas;
+
+library(esquisse) # facilita a geração de gráficos interativos;
+
+library(DescTools) # funções estatísticas básicas e wrappers de conveniência para descrever dados com eficiência;
+
+library(moments) # para calcular moments, skewness.
+
+
+
+```
+
+## Preparação dos dados
+
+**INFORMAÇÕES SOBRE OS DADOS**
+
+*A base de dados a ser analisada foi obtida na data 05/05/2022 a partir do seguinte* [link.](https://www.kaggle.com/datasets/joaoavf/inep-microdados-enade-2018)
+
+*É objetivo do Enade aferir o desempenho dos estudantes em relação aos conteúdos programáticos previstos nas diretrizes curriculares do respectivo curso de graduação, suas habilidades para ajustamento às exigências decorrentes da evolução do conhecimento e suas competências para compreender temas exteriores ao âmbito específico de sua profissão, ligados à realidade brasileira e mundial e a outras áreas do conhecimento (Lei no 10.861/2004, art. 5º, §1º).*
+
+*O dataset original possui 548 mil 127 linhas e 137 colunas em um formato txt. À frente de uma massa de dados tão volumosa, foram estipulados uns parâmetros para facilitar a análise dos dados.*
+
+
+**____________________________________________________________________________**
+
+
+**IMPORTAÇÃO DOS DADOS**
+
+*Abaixo é realizada a leitura do arquivo original:*
+
+```{r echo=T, message=F, warning=F}
+
+# carregando a base de dados. 
+microdados_enade <- read.table("D:/taciana/Documents/2018/3.DADOS/microdados_enade_2018.txt",
+                               header = TRUE, 
+                               sep=";", 
+                               dec = ",", 
+                               colClasses=c(NT_OBJ_FG="numeric"))
+```
+
+```{r echo=T, message=F, warning=F}
+
+# pré-visualização dos dados.
+datatable(microdados_enade[1:30,], options = list(searching = F, paging = T, scrollX = T))
+```
+
+
+**____________________________________________________________________________**
+
+
+
+**LIMPEZA E TRATAMENTO DOS DADOS**
+
+*Abaixo segue o tratamento e limpeza de dados*
+
+```{r echo=T, message=F, warning=F}
+
+# verificação da quantidade de NA´s presente no dataset.
+colSums(is.na(microdados_enade))
+```
+
+
+**____________________________________________________________________________**
+
+
+
+*Em seguida a verificação da quantidade de **NA'S** presente nas variáveis, foram escolhidos os **parâmetros** de interesse que serão analisados.*
+
+```{r echo=T, message=F, warning=F}
+
+# filtro que escolhe os parâmetros
+microdados_enade <- microdados_enade %>% dplyr:: select(NT_OBJ_FG,
+                                                       CO_GRUPO,
+                                                       CO_REGIAO_CURSO,
+                                                       QE_I02,
+                                                       CO_TURNO_GRADUACAO,
+                                                       CO_UF_CURSO,
+                                                       TP_SEXO)
+```
+
+*Classificando as variáveis:*
+
+*- NT_OBJ_FG: quantitativa contínua;*
+
+*- CO_GRUPO: qualitativa nominal;*
+
+*- CO_REGIAO_CURSO: qualitativa nominal;*
+
+*- QE_I02: qualitativa nominal;*
+
+*- CO_TURNO_GRADUACAO: qualitativa ordinal;*
+
+*- CO_UF_CURSO: qualitativa nominal.*
+
+*- TP_SEXO: qualitativa nominal.*
+
+
+**____________________________________________________________________________**
+
+
+```{r echo=T, message=F, warning=F}
+
+# remoção das linhas com valores NA´S.
+microdados_enade<-na.omit(microdados_enade)
+```
+
+**____________________________________________________________________________**
+
+
+```{r echo=T, message=F, warning=F}
+
+# verificação da quantidade de NA´s presente no dataset tratado.
+colSums(is.na(microdados_enade))
+```
+
+
+**____________________________________________________________________________**
+
+
+*Após ter feito a remoção de todos os valores **NA´S **, foi escolhido um curso do **ENADE 2018 **para ser esmiuçado no restante da análise.*
+
+*Curso escolhido: **DIREITO** *
+
+
+```{r echo=T, message=F, warning=F}
+# filtro que escolhe o curso a ser analisado.
+enade_direito <- microdados_enade%>%filter(CO_GRUPO==2)
+```
+
+
+
+**____________________________________________________________________________**
+
+
+```{r echo=T, message=F, warning=F}
+# transformando a variável CO_GRUPO.
+# mutate() cria novas variáveis em função das variáveis existentes.
+enade_direito <- enade_direito %>% 
+  mutate (CURSO = case_when (CO_GRUPO == 2 ~ "Direito"))
+
+
+```
+
+
+
+**____________________________________________________________________________**
+
+
+```{r echo=T, message=F, warning=F}
+# transformando a variável CO_REGIAO_CURSO.
+enade_direito <- enade_direito %>% 
+  mutate(REGIAO = case_when (CO_REGIAO_CURSO == 1 ~ "Norte",
+                              CO_REGIAO_CURSO == 2 ~ "Nordeste",
+                              CO_REGIAO_CURSO == 3 ~ "Sudeste",
+                              CO_REGIAO_CURSO == 4 ~ "Sul",
+                              CO_REGIAO_CURSO == 5 ~ "Centro-Oeste" ))
+
+
+```
+
+
+
+**____________________________________________________________________________**
+
+
+```{r echo=T, message=F, warning=F}
+# transformando a variável QE_I02.
+enade_direito <- enade_direito %>% 
+  mutate(RACA = case_when (QE_I02 == "A" ~ "Branca",
+                           QE_I02 == "B" ~ "Preta",
+                           QE_I02 == "C" ~ "Amarela",
+                           QE_I02 == "D" ~ "Parda",
+                           QE_I02 == "E" ~ "Indígena",
+                           QE_I02 == "F" ~ "NãoDeclarada" ))
+
+
+```
+
+
+
+**____________________________________________________________________________**
+
+
+```{r echo=T, message=F, warning=F}
+# transformando a variável CO_UF_CURSO.
+enade_direito <- enade_direito %>%
+  mutate(ESTADOS = case_when (CO_UF_CURSO == 11 ~"RO",
+                              CO_UF_CURSO == 12 ~ "AC",
+                              CO_UF_CURSO == 13 ~ "AM",
+                              CO_UF_CURSO == 14 ~ "RR",
+                              CO_UF_CURSO == 15 ~ "PA",
+                              CO_UF_CURSO == 16 ~ "AP",
+                              CO_UF_CURSO == 17 ~ "TO",
+                              CO_UF_CURSO == 21 ~ "MA",
+                              CO_UF_CURSO == 22 ~ "PI",
+                              CO_UF_CURSO == 23 ~ "CE",
+                              CO_UF_CURSO == 24 ~ "RN",
+                              CO_UF_CURSO == 25 ~ "PB",
+                              CO_UF_CURSO == 26 ~ "PE",
+                              CO_UF_CURSO == 27 ~ "AL",
+                              CO_UF_CURSO == 28 ~ "SE",
+                              CO_UF_CURSO == 29 ~ "BA",
+                              CO_UF_CURSO == 31 ~ "MG",
+                              CO_UF_CURSO == 32 ~ "ES",
+                              CO_UF_CURSO == 33 ~ "RJ",
+                              CO_UF_CURSO == 35 ~ "SP",
+                              CO_UF_CURSO == 41 ~ "PR",
+                              CO_UF_CURSO == 42 ~ "sc",
+                              CO_UF_CURSO == 43 ~ "RS",
+                              CO_UF_CURSO == 50 ~ "MS",
+                              CO_UF_CURSO == 51 ~ "MT",
+                              CO_UF_CURSO == 52 ~ "GO",
+                              CO_UF_CURSO == 53 ~ "DF"
+                              
+))
+
+
+```
+
+
+
+**____________________________________________________________________________**
+
+
+
+```{r echo=T, message=F, warning=F}
+# transformando a variável CO_TURNO_GRADUACAO.
+enade_direito <- enade_direito %>%
+  mutate(TURNO = case_when (CO_TURNO_GRADUACAO == 1 ~ "Matutino",
+                            CO_TURNO_GRADUACAO == 2 ~ "Vespertino",
+                            CO_TURNO_GRADUACAO == 3 ~ "Integral",
+                            CO_TURNO_GRADUACAO == 4 ~ "Noturno" ))
+
+
+```
+
+
+
+**____________________________________________________________________________**
+
+
+```{r echo=T, message=F, warning=F}
+# transformando a variável TP_SEXO.
+enade_direito <- enade_direito %>% 
+  mutate(SEXO = case_when(TP_SEXO == "M" ~ "Masculino",
+                          TP_SEXO == "F" ~ "Feminino"))
+
+
+```
+
+
+**____________________________________________________________________________**
+
+
+```{r echo=T, message=F, warning=F}
+# removendo as variáveis antigas.
+enade_direito = enade_direito[,-c(2,3,4,5,6,7)]
+
+```
+
+
+**____________________________________________________________________________**
+
+
+```{r echo=T, message=F, warning=F}
+# renomeando a variável NT_OBJ_FG.
+names(enade_direito)[1] = "NOTAS"
+
+```
+
+
+**____________________________________________________________________________**
+
+
+*Após toda a limpeza e categorização das variáveis, abaixo está uma amostra do **dataset final.** *
+
+```{r echo=T, message=F, warning=F}
+
+# pré-visualização dos dados.
+datatable(enade_direito[1:30,], options = list(searching = F, paging = T, scrollX = T))
+```
+
+
+## Análise exploratória dos dados
+
+*- A primeira análise será referente as notas brutas (**NOTAS**) dos alunos de Direito, por meio do histograma e da curva de densidade.*
+
+```{r echo=T, message=F, warning=F}
+
+g_hist=ggplot(enade_direito,aes(x=NOTAS)) + 
+  geom_histogram(color = "black",fill="lightblue",bins =50,aes(y=(..count..)/sum(..count..)))+
+  ggtitle("Histograma - nota dos alunos de Direito")+
+  xlab("Nota dos alunos") +
+  ylab("Frequência relativa")
+
+g_densidade=ggplot(enade_direito,aes(x=NOTAS))+
+  geom_density(col=2,size = 1, aes(y = 27 * (..count..)/sum(..count..))) +
+  ggtitle("Curva de densidade - nota dos alunos de Direito") +
+  xlab("Nota dos alunos") +
+  ylab("Frequência relativa")
+
+
+
+g_hist_densidade = ggplot(enade_direito,aes(x=NOTAS)) + 
+  geom_histogram(color = "black",fill="lightblue",bins =50,aes(y=(..count..)/sum(..count..)))+
+  geom_density(col=2,size = 1, aes(y = 27 * (..count..)/sum(..count..))) +
+  ggtitle("Histograma e curva de densidade - nota dos alunos de Direito")+
+  xlab("Nota dos alunos") +
+  ylab("Frequência relativa")
+
+
+
+grid.arrange( g_hist,
+              g_densidade,
+              g_hist_densidade,
+              nrow=3,ncol=1)
+
+
+
+
+```
+
+*Na curva de densidade acima notamos o padrão integral da disposicão. A área sob a curva e acima do intervalo de valores é a proporção de todas as pesquisas que se delimitam no intervalo.*
+
+
+**____________________________________________________________________________**
+
+
+
+*- Agora analisaremos como essas notas se comportam quanto ao turno em que eles estão matriculados.*
+
+```{r echo=T, message=F, warning=F}
+
+enade_direito %>% select(TURNO,NOTAS) %>% group_by(TURNO) %>%
+  summarise(Quantidade=n(),Media = mean(NOTAS),Mediana = median(NOTAS),
+            CV=sd(NOTAS)/Media*100,Assimetria=skewness(NOTAS),
+            Curtose=kurtosis(NOTAS)) %>% arrange(desc(Quantidade)) %>% formattable()
+
+```
+
+*Percebemos que o turno com maior quantidade de alunos é o Noturno (**83281**). O turno com melhor desempenho foi o Integral (**Média: 66.95%**). Em conformidade com os dados conseguimos ver que existe evidências de que o desempenho não se destoa expressivamente entre os turnos.*
+
+
+**____________________________________________________________________________**
+
+
+
+*- A seguir faremos **análise cruzada** do SEXO e TURNO.*
+
+```{r echo=T, message=F, warning=F}
+df1 = enade_direito %>% select(SEXO,TURNO) %>% count(SEXO,TURNO) 
+colnames(df1)[3]="freq_abs"
+df2 = df1 %>% add_count(SEXO,wt=freq_abs) %>% mutate("freq_relativa"=freq_abs/n)
+df2 %>% ggplot(aes(x=TURNO,y=freq_relativa,fill=SEXO))+ 
+  geom_bar(stat="identity",show.legend = F)+labs(x="turno",y="frequência")+
+  theme_minimal()+theme(axis.text.y = element_blank())+
+  geom_text(aes(label=paste0(round(freq_relativa*100,2),"%"),group=SEXO),
+            vjust=-0.5,size=3.2)+facet_grid(~SEXO)+
+  ggtitle("Frequência dos alunos de Direito por TURNO e SEXO")
+
+
+
+
+```
+
+*O gráfico acima indica a frequência relativa dos alunos quanto ao turno e o sexo. Notamos haver índices de associação entre os grupos, pois os turnos se comportam de forma similar em ambos os sexos.*
+
+
+**____________________________________________________________________________**
+
+
+*- Faremos a seguir uma análise do sexo dos alunos em relação a nota bruta que eles obtiveram.*
+
+```{r echo=T, message=F, warning=F}
+enade_direito %>% select(SEXO,NOTAS) %>% group_by(SEXO) %>%
+  summarise(Quantidade=n(),Media = mean(NOTAS),Mediana = median(NOTAS),
+            CV=sd(NOTAS)/Media*100,Assimetria=skewness(NOTAS),
+            Curtose=kurtosis(NOTAS)) %>% arrange(desc(Quantidade))
+
+
+
+```
+*Podemos perceber que a melhor nota foi obtida pelo sexo masculino (**Média = 58,1**)*
+
+
+**____________________________________________________________________________**
+
+
+*- Vamos analisar agora o cruzamento entre REGIÃO e TURNO.*
+
+```{r echo=T, message=F, warning=F}
+df3 = enade_direito %>% select(REGIAO,TURNO) %>% count(REGIAO,TURNO) 
+colnames(df3)[3]="freq_abs"
+df4 = df3 %>% add_count(REGIAO,wt=freq_abs) %>% mutate("freq_relativa"=freq_abs/n)
+df4 %>% ggplot(aes(x=TURNO,y=freq_relativa,fill=REGIAO))+ 
+  geom_bar(stat="identity",show.legend = F)+labs(x="turno",y="frequência")+
+  theme_minimal()+theme(axis.text.y = element_blank())+
+  geom_text(aes(label=paste0(round(freq_relativa*100,2),"%"),group=REGIAO),
+            vjust=0.6,size=3.2)+facet_wrap(~REGIAO,nrow=3)+
+  ggtitle("Frequência dos Alunos de Direito por REGIÃO e TURNO")
+
+
+```
+
+*Percebemos que os turnos compõem-se de maneira bastante parecida em cada uma das regiões, exceto pela região Norte, pois os turnos da manhã e vespertino são bem semelhantes quanto a frequência dos alunos.*
+
+
+**____________________________________________________________________________**
+
+
+*-  A seguir uma análise das regiões dos alunos em relação a nota que eles obtiveram.*
+
+```{r echo=T, message=F, warning=F}
+
+enade_direito %>% select(REGIAO,NOTAS) %>% group_by(REGIAO) %>%
+  summarise(Quantidade=n(),Media = mean(NOTAS),Mediana = median(NOTAS),
+            CV=sd(NOTAS)/Media*100,Assimetria=skewness(NOTAS),
+            Curtose=kurtosis(NOTAS)) %>% arrange(desc(Quantidade))
+
+```
+
+*Vemos que a região Sudeste teve mais alunos (**53616**), mas a melhor média (**55,8**) de notas ficou com a região Sul. Já a região de pior desempenho foi a região Norte. (**Média = 52,5**)*
+
+
+**____________________________________________________________________________**
+
+
+*- Agora iremos comparar as NOTAS obtidas por ESTADOS através de um gráfico de Box-plot.*
+
+```{r echo=T, message=F, warning=F}
+
+enade_direito %>%
+  mutate(class = fct_reorder(ESTADOS, NOTAS, .fun='length' )) %>%
+  ggplot( aes(x=ESTADOS, y=NOTAS, fill=class)) + 
+  geom_boxplot() +
+  xlab("ESTADOS") +
+  theme(legend.position="none") +
+  xlab("") +
+  xlab("")
+
+
+```
+
+*Os 5 Estados com as piores notas são: Alagoas, Amapá, Goias, Roraima, Tocantins. Com a análise por Estados confirmamos que a Região com o pior desempenho é a região Norte.*
+
+
+## Conclusões
+
+*O Exame Nacional de Desempenho de Estudantes (Enade) avalia o grau de desempenho dos alunos dos cursos de graduação tanto das instituições privadas quanto nas instituições públicas.*
+
+*As informações geradas a partir dos resultados do **ENADE **são usadas por diversos públicos:*
+
+*- Instituições de educação superior (dirigentes, coordenadores e estudantes) que podem usar as informações para, por exemplo, analisar questões pedagógicas e reorientá-las -- se for o caso;*
+
+*- Secretarias do MEC que cuidam da regulação e supervisão da educação superior (Secretaria de Educação Superior, Secretaria de Educação Profissional e Tecnológica e Secretaria de Educação a Distância);*
+
+*- Gestores públicos -- podem usar os dados para orientar ações e políticas públicas educacionais;*
+
+*- Pesquisadores -- usam os dados em seus trabalhos acadêmicos;*
+
+*- Sociedade em geral -- as pessoas buscam, nas informações colocadas a sua disposição, elementos para conhecer melhor um curso de seu interesse.*
+
+
+**____________________________________________________________________________**
+
+
+*Neste trabalho, investigamos os dados dos curso da graduação em Direito do **ENADE 2018**. Mais especificamente, a investigação se deu sobre a distribuição por sexo, turno, região, raça e desempenho da nota bruta.*
+
+*A priori o dataset original possuia 548 mil 127 linhas e 137 colunas em um formato txt, após escolha do curso a ser analisado juntamente com a etapa de limpeza e tratamento, o dataset ficou com 127 mil 423 linhas e 7 colunas.*
+
+*Ao formalizarmos as análises vistas anteriormente, temos os seguintes **insights:** *
+
+*- O turno com maior quantidade de alunos é o Noturno;*
+
+*- O turno com melhor desempenho dos alunos, de modo geral, foi o Integral;*
+
+*- As notas não se destoam expressivamente entre os turnos;*
+
+*- Os alunos, independentemente do sexo, se comportam de forma similar em relação ao turno escolhido;*
+
+*- Os homens, de um modo geral, possuem as melhores notas;*
+
+*- Os alunos, independentemente da região , estudam preferencialmente no turno da noite;*
+
+*-  A região com o maior numero de estudantes, e a região Sudeste;*
+
+*-  A região com melhor média dos alunos, é a região Sul;*
+
+*-  A região com a pior média dos alunos, é a região Norte;*
+
+*-  A raça Branca do turno integral possui a maior média;*
+
+*Por fim, não é possível apenas a partir desta análise identificarmos os motivos de discrepâncias nos resultados obtidos, mas é possível fazer algumas indagações como: de maneira geral, de 2018 para cá, existiu alguma alteração na Região com o melhor desempenho? Ou os cursos de Direito melhoraram na formação de seus graduandos?*
+
+*Tais interrogações remete para outras análises que podem ser feitas futuramente.*
+
+
+## Referências
+
+https://www.youtube.com/watch?v=mhevC54PWAs&list=PL4OAe-tL47sZJVgc80pJazcy4iI59k5yy Acesso em 01/05/2022, às 20:10
+
+https://www.kaggle.com/datasets/joaoavf/inep-microdados-enade-2018 Acesso em 05/05/2022, às 20:00
+
+DAMIANI; MILZ; LENTE; FALBEL; CORREA; TRECENTI; LUDUVICE; LACERDA; AMORIM. Ciência de dados em R: curso-r. Última atualização: 10/03/2022. Disponível em [https://livro.curso-r.com/index.html]. último acesso em 21/05/2022, às 18h30.
+
+https://www.jusbrasil.com.br/topicos/10955841/artigo-5-da-lei-n-10861-de-14-de-abril-de-2004#:~:text=d%C3%A1%20outras%20provid%C3%AAncias-,Art.,de%20Desempenho%20dos%20Estudantes%20%2D%20ENADE Acesso em 05/05/2022, às 20:20
+
+
+
